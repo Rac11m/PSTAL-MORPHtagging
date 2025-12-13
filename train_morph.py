@@ -31,7 +31,7 @@ def fit(model, epochs, train_loader, dev_loader):
       loss.backward()
       optimizer.step()
       total_loss += loss.item()  
-    print(f"{epoch}/{epochs} ")
+    print(f"{epoch+1}/{epochs} ")
     print("train_loss = {:.4f}".format(total_loss / len(train_loader.dataset)))
     print("dev_loss = {:.4f} dev_acc = {:.4f}".format(*perf(model, dev_loader, criterion)))
 
@@ -58,14 +58,12 @@ def perf(model, dev_loader, criterion):
 
 def read_corpus(filename, wordvocab, tagvocab, max_len, batch_size, train_mode=True, batch_mode=True):
     if train_mode:
-      wordvocab = defaultdict(lambda: len(wordvocab))
-      wordvocab["<PAD>"]
-      wordvocab["<UNK>"]
+
 
       tagvocab = defaultdict(lambda: len(tagvocab))
       tagvocab["<PAD>"]
     
-    words, tags = [], []
+    chars, tags = [], []
 
     infile = open(filename, encoding='UTF-8')
     conllu_reader = CoNLLUReader(infile=infile)
@@ -83,10 +81,8 @@ def read_corpus(filename, wordvocab, tagvocab, max_len, batch_size, train_mode=T
       
       tags.append(sent_tags)
 
-      forms = [tok["form"] for tok in sent]
-
       if train_mode:
-        words.append([wordvocab[w] for w in forms])
+        chars.append([wordvocab[w] for w in forms])
       else:
         words.append([wordvocab.get(w, wordvocab['<UNK>']) for w in forms])
       
@@ -100,7 +96,7 @@ def read_corpus(filename, wordvocab, tagvocab, max_len, batch_size, train_mode=T
       return words, tags, wordvocab, tagvocab
 
 if __name__ == "__main__" : 
-  train_loader, wordvocab, tagvocab = read_corpus(filename="./pstal-etu/sequoia/sequoia-ud.parseme.frsemcor.simple.train", wordvocab=None, tagvocab=None, max_len=40, batch_size=32, train_mode=True, batch_mode=True)
+  train_loader, wordvocab, tagvocab = read_corpus(filename="../pstal-etu/sequoia/sequoia-ud.parseme.frsemcor.simple.train", wordvocab=None, tagvocab=None, max_len=40, batch_size=32, train_mode=True, batch_mode=True)
   num_embeddings= len(wordvocab) 
   output_size= len(tagvocab) 
   hidden_size=200
@@ -110,7 +106,7 @@ if __name__ == "__main__" :
     "embedding_dim": embedding_dim, 
     "hidden_size": hidden_size}
   
-  dev_loader, _, _ = read_corpus(filename="./pstal-etu/sequoia/sequoia-ud.parseme.frsemcor.simple.dev", wordvocab=wordvocab, tagvocab=tagvocab, max_len=40, batch_size=32, train_mode=False, batch_mode=True)
+  dev_loader, _, _ = read_corpus(filename="../pstal-etu/sequoia/sequoia-ud.parseme.frsemcor.simple.dev", wordvocab=wordvocab, tagvocab=tagvocab, max_len=40, batch_size=32, train_mode=False, batch_mode=True)
   model = RNN_morph(hidden_size=hidden_size, output_size=output_size, num_embeddings=num_embeddings, embedding_dim=embedding_dim)
   fit(model=model, epochs=15, train_loader=train_loader, dev_loader=dev_loader)
   
