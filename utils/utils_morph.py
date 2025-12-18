@@ -2,6 +2,7 @@ import torch
 import typing as T
 from conllu import parse_incr
 from collections import defaultdict, Counter
+from torch.utils.data import TensorDataset, DataLoader
 
 def load_chars(in_file: str, train_mode: bool):
     '''
@@ -11,12 +12,10 @@ def load_chars(in_file: str, train_mode: bool):
     sent_list = []
 
     file_buffer = open(in_file, encoding="UTF-8")
-    sents = parse_incr(file_buffer)
+    sents = list(parse_incr(file_buffer))
     
     for sent in sents:
         sent_list.append(sent.metadata['text'])
-
-    file_buffer.close()
     
     chars = []
     in_enc = []
@@ -26,7 +25,7 @@ def load_chars(in_file: str, train_mode: bool):
         if v == ' ':
             vocab[i] = '<esp>'
         
-    for s in sent_list[:1]:
+    for i, s in enumerate(sent_list):
         c = ["<pad>"] + [w if w != " " else "<esp>" for w in s]
         chars.append(c)
 
@@ -37,12 +36,20 @@ def load_chars(in_file: str, train_mode: bool):
         in_enc.append(char_to_int)
         
         end = []
-        for idx, w in enumerate(s): 
-            if w == ' ':
-              end.append(idx-1)     
+        offset = 0
+        for tok in sents[i]:
+            if not tok["form"]:
+                continue
+            offset += len(tok["form"])
+            end.append(offset + 1)
+            offset += 1
+        if len(end) == 0:
+            end = [0] 
         ends.append(end)
     
-    return chars, in_enc, ends 
+    file_buffer.close()
+    
+    return chars, in_enc, ends, vocab
 
 def build_feats_dict(in_file: str, diff_feats: list):
     feats_values = {}
@@ -51,6 +58,7 @@ def build_feats_dict(in_file: str, diff_feats: list):
 
     file_buffer = open(in_file, encoding="UTF-8")
     sents = parse_incr(file_buffer)
+    
     for sent in sents:
         for tok in sent:
             if tok["feats"] is not None:
@@ -60,7 +68,9 @@ def build_feats_dict(in_file: str, diff_feats: list):
     for k,v in feats_values.items():
         for i,w in enumerate(feats_values[k]): 
             feats_values[k][w] = i
+    
     file_buffer.close()
+    
     return feats_values
 
 def load_feats(in_file: str, feat: str, feat_dict: dict):
@@ -84,7 +94,6 @@ def load_feats(in_file: str, feat: str, feat_dict: dict):
 
     file_buffer.close()
 
-    
     return out_enc
 
 
@@ -106,5 +115,7 @@ def unique_feats(in_file: str):
             if tok["feats"] is not None:
                 for l in list(tok["feats"].keys()):
                     diff_feats.append(l)
+    
     file_buffer.close()
+    
     return list(set(diff_feats))

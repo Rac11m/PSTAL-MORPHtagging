@@ -20,8 +20,8 @@ class RNN_morph(nn.Module):
     def forward(self, in_enc, ends):
         embedding = self.embed(in_enc)
         rnn_out, _ = self.gru(embedding)
-        ends = ends.unsqueeze(-1)
-        ends = ends.expand(-1, -1, rnn_out.size(-1))
+        ends = ends.unsqueeze(-1) # unsqueeze the last dim (2)
+        ends = ends.expand(-1, -1, rnn_out.size(-1)) # rnn_out.size(-1) =  rnn_out.d_h
         word_repr = rnn_out.gather(dim=1, index=ends) 
         word_repr = self.dropout(word_repr)            
 
