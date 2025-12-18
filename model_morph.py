@@ -17,8 +17,12 @@ class RNN_morph(nn.Module):
         self.decision = nn.Linear(hidden_size, output_size)
 
     
-    def forward(self, idx_words):
-        embedding = self.embed(idx_words)
-        seq, _ = self.gru(embedding)
-        seq = self.dropout(seq)
-        return self.decision(seq)
+    def forward(self, in_enc, ends):
+        embedding = self.embed(in_enc)
+        rnn_out, _ = self.gru(embedding)
+        ends = ends.unsqueeze(-1)
+        ends = ends.expand(-1, -1, rnn_out.size(-1))
+        word_repr = rnn_out.gather(dim=1, index=ends) 
+        word_repr = self.dropout(word_repr)            
+
+        return self.decision(word_repr)

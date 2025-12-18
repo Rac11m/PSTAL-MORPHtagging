@@ -6,7 +6,7 @@ from use_conllulib import CoNLLUReader
 from torch.utils.data import TensorDataset, DataLoader
 
 
-def pad_tensor(X, max_len):
+def pad_tensor(X, max_len, char_mode=True):
   res = torch.full((len(X), max_len), 0)
   for (i, row) in enumerate(X) :
     x_len = min(max_len, len(X[i]))
@@ -55,45 +55,16 @@ def perf(model, dev_loader, criterion):
   total = len(dev_loader.dataset)
   return total_loss / total, correct / total_tokens
 
-
-def read_corpus(filename, wordvocab, tagvocab, max_len, batch_size, train_mode=True, batch_mode=True):
-    if train_mode:
-
-
-      tagvocab = defaultdict(lambda: len(tagvocab))
-      tagvocab["<PAD>"]
-    
-    chars, tags = [], []
-
-    infile = open(filename, encoding='UTF-8')
-    conllu_reader = CoNLLUReader(infile=infile)
-
-    for sent in conllu_reader.readConllu():
-      
-      sent_tags = []
-      for tok in sent:
-        tag = tok["feats"]
-        tag = str(tag)
-        if train_mode:
-          sent_tags.append(tagvocab[tag])
-        else:
-          sent_tags.append(tagvocab.get(tag, tagvocab["<PAD>"]))
-      
-      tags.append(sent_tags)
-
-      if train_mode:
-        chars.append([wordvocab[w] for w in forms])
-      else:
-        words.append([wordvocab.get(w, wordvocab['<UNK>']) for w in forms])
-      
-    infile.close()
-
-    if batch_mode:
-      dataset = TensorDataset(pad_tensor(words, max_len), pad_tensor(tags, max_len))
-      dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=train_mode)
-      return dataloader, wordvocab, tagvocab
+def build_loader(in_enc, ends, out_enc, max_c, max_w, batch_size, batch_mode=True):
+    if batch_size:
+        in_enc_tensor = pad_tensor(in_enc, max_c)
+        ends_tensor = pad_tensor(ends, max_w)
+        out_enc_tensor = pad_tensor(out_enc, max_w)
+        dataset = TensorDataset(in_enc_tensor, ends_tensor, out_enc_tensor)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=train_mode)
+        return dataloader, in_enc, ends, out_enc
     else:
-      return words, tags, wordvocab, tagvocab
+        return in_enc, ends_out_enc
 
 if __name__ == "__main__" : 
   train_loader, wordvocab, tagvocab = read_corpus(filename="../pstal-etu/sequoia/sequoia-ud.parseme.frsemcor.simple.train", wordvocab=None, tagvocab=None, max_len=40, batch_size=32, train_mode=True, batch_mode=True)
